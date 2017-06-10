@@ -3,6 +3,7 @@
 vagrant/newsdata.sql
 newsdata.sql
 vagrant/analyse_log/newsdata.sql
+vagrant/restaurant_menu/client_secrets.json
 
 # Logs and databases #
 ######################
