@@ -2,6 +2,11 @@
 Starter Code for Auth&amp;Auth course
 # Installing the Vagrant VM for ud330 - Authentication & Authorization
 
+other oAuth providers:
+1) http://login.amazon.com/website
+2) https://developer.github.com/apps/building-integrations/setting-up-and-registering-oauth-apps/
+3) https://developer.paypal.com/docs/integration/direct/paypal-oauth2/
+
 **Note: If you already have a vagrant machine installed from previous Udacity courses skip to the 'Fetch the Source Code and VM Configuration' section**
 
 In Lessons 2,3 and 4 of this course, you'll use a virtual machine (VM) to run a web server and a web app that uses it. The VM is a Linux system that runs on top of your own machine.  You can share files easily between your computer and the VM.
