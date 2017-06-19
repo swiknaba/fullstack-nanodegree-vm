@@ -33,6 +33,78 @@ DBSession = sessionmaker(bind=engine)
 session = DBSession()
 
 
+#fb_connect
+@app.route('/fbconnect', methods=['POST'])
+def fbconnect():
+    if request.args.get('state') != login_session['state']:
+        response = make_response(json.dumps('Invalid state parameter'), 401)
+        response.headers['Content-Type'] = 'application/json'
+        return response
+    access_token = request.data
+    print "access token received %s " % access_token
+
+    #exchange client token for long-lived server-side token with GET
+    app_id = json.loads(
+        open('fb_client_secrets.json', 'r').read())['web']['app_id']
+    app_secret = json.loads(
+        open('fb_client_secrets.json', 'r').read())['web']['app_secret']
+    url = ('https://graph.facebook.com/v2.9/oauth/access_token?'
+           'grant_type=fb_exchange_token&client_id=%s&client_secret=%s'
+           '&fb_exchange_token=%s') % (app_id, app_secret, access_token)
+    h = httplib2.Http()
+    result = h.request(url, 'GET')[1]
+    data = json.loads(result)
+    token = 'access_token=' + data['access_token']
+    # see: https://discussions.udacity.com/t/
+    #   issues-with-facebook-oauth-access-token/233840?source_topic_id=174342
+
+    # Use token to get user info from API
+    # make API call with new token
+    url = 'https://graph.facebook.com/v2.9/me?%s&fields=name,id,email,picture' % token
+    h = httplib2.Http()
+    result = h.request(url, 'GET')[1]
+    data = json.loads(result)
+    """
+    print("\n ========= \n")
+    print(data)
+    print("\n ========= \n")
+    """
+    login_session['provider'] = 'facebook'
+    login_session['username'] = data['name']
+    login_session['email'] = data['email']
+    login_session['facebook_id'] = data['id']
+    login_session['picture'] = data['picture']["data"]["url"]
+    login_session['access_token'] = access_token
+
+    #see if user exists
+    user_id = getUserId(login_session['email'])
+    if not user_id:
+        user_id = createUser(login_session)
+    login_session['user_id'] = user_id
+
+    output = ''
+    output += '<h1>Welcome, '
+    output += login_session['username']
+    output += '!</h1><img src="'
+    output += login_session['picture']
+    output += ' ">'
+
+    flash("Now logged in as %s" % login_session['username'])
+    return output
+
+
+# fb disconnect
+@app.route('/fbdisconnect')
+def fbdisconnect():
+    facebook_id = login_session['facebook_id']
+    access_token = login_session['access_token']
+    url = 'https://graph.facebook.com/%s/permissions?access_token=%s' % (
+        facebook_id, access_token)
+    h = httplib2.Http()
+    result = h.request(url, 'DELETE')[1]
+    return "you have been logged out"
+
+
 #GConnect
 @app.route('/gconnect', methods=['POST'])
 def gconnect():
@@ -94,6 +166,7 @@ def gconnect():
 
     # Store the access token in the session for later use.
     #login_session['credentials'] = credentials
+    login_session['provider'] = 'google'
     login_session['access_token'] = credentials.access_token
     login_session['gplus_id'] = gplus_id
 
@@ -131,7 +204,6 @@ def gconnect():
 
 #Disconnect - revoke tokens and reset login_session
 @app.route('/logout')
-@app.route('/gdisconnect')
 def gdisconnect():
     if not login_session.get('access_token', None):
         return "not logged in"
@@ -154,10 +226,6 @@ def gdisconnect():
     print(result)
     if result['status'] == '200':
         del login_session['access_token']
-        del login_session['gplus_id']
-        del login_session['username']
-        del login_session['email']
-        del login_session['picture']
         response = make_response(json.dumps('Successfully disconnected.'), 200)
         response.headers['Content-Type'] = 'application/json'
         return response
@@ -166,6 +234,29 @@ def gdisconnect():
             'Failed to revoke token for given user.', 400))
         response.headers['Content-Type'] = 'application/json'
         return response
+
+
+# general disconnect function
+@app.route('/disconnect')
+def disconnect():
+    if 'provider' in login_session:
+        if login_session['provider'] == 'google':
+            gdisconnect()
+            del login_session['gplus_id']
+            del login_session['access_token']
+        if login_session['provider'] == 'facebook':
+            fbdisconnect()
+            del login_session['facebook_id']
+        del login_session['username']
+        del login_session['email']
+        del login_session['picture']
+        del login_session['user_id']
+        del login_session['provider']
+        flash("you have been logged out successfully")
+        return redirect(url_for('showRestaurants'))
+    else:
+        flash("You were not logged in to begin with")
+        return redirect(url_for('showRestaurants'))
 
 
 # create a state token to prevent request forgery
