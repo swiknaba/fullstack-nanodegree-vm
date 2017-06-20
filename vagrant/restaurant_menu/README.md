@@ -3,6 +3,7 @@ Starter Code for Auth&amp;Auth course
 # Installing the Vagrant VM for ud330 - Authentication & Authorization
 
 other oAuth providers:
+0) official page: https://oauth.net/2/
 1) http://login.amazon.com/website
 2) https://developer.github.com/apps/building-integrations/setting-up-and-registering-oauth-apps/
 3) https://developer.paypal.com/docs/integration/direct/paypal-oauth2/
